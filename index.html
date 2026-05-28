@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>门店流量分析报告生成器</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>📊 门店流量分析报告生成器</h1>
+    <p>上传门店截图 → AI智能提取数据 → 一键生成专业分析报告</p>
+  </div>
+
+  <!-- Step indicator -->
+  <div class="steps">
+    <div class="step-dot" id="dot1"><div class="dot">1</div><span class="label">配置</span></div>
+    <div class="step-line"></div>
+    <div class="step-dot" id="dot2"><div class="dot">2</div><span class="label">上传提取</span></div>
+    <div class="step-line"></div>
+    <div class="step-dot" id="dot3"><div class="dot">3</div><span class="label">编辑确认</span></div>
+  </div>
+
+  <!-- ════════ Step 1: Configuration ════════ -->
+  <div class="section-panel active" id="step1">
+    <div class="card">
+      <h2 style="font-size:18px;margin-bottom:4px">⚙️ API 配置</h2>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">配置多模态 AI 接口，用于从截图中自动提取门店数据。API Key 仅保存在本地浏览器中。</p>
+
+      <div class="provider-presets">
+        <button class="preset-btn active" data-provider="qwen">通义千问</button>
+        <button class="preset-btn" data-provider="moonshot">Moonshot</button>
+        <button class="preset-btn" data-provider="zhipu">智谱 GLM</button>
+        <button class="preset-btn" data-provider="deepseek">DeepSeek</button>
+        <button class="preset-btn" data-provider="openai">OpenAI</button>
+        <button class="preset-btn" data-provider="custom">自定义</button>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>API 服务商</label>
+          <select id="apiProvider">
+            <option value="qwen">通义千问 (DashScope)</option>
+            <option value="moonshot">Moonshot</option>
+            <option value="zhipu">智谱 GLM</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="openai">OpenAI</option>
+            <option value="custom">自定义</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>API Key *</label>
+          <input type="password" id="apiKey" placeholder="sk-...">
+        </div>
+        <div class="form-group full">
+          <label>API Endpoint</label>
+          <input type="text" id="apiEndpoint" value="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions">
+        </div>
+        <div class="form-group">
+          <label>模型名称</label>
+          <input type="text" id="apiModel" value="qwen-vl-max">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:18px;margin-bottom:4px">📸 上传门店截图</h2>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">支持大众点评、美团、高德地图、后台数据等任意来源截图</p>
+
+      <div class="upload-zone" id="uploadZone">
+        <div class="icon">📷</div>
+        <div class="main-text">拖拽图片到这里 / 点击上传 / Ctrl+V 粘贴</div>
+        <div class="sub-text">支持 JPG、PNG 格式，可上传多张</div>
+        <input type="file" id="fileInput" accept="image/*" multiple hidden>
+      </div>
+      <div class="preview-grid" id="previewGrid"></div>
+      <div style="margin-top:8px;font-size:13px;color:var(--text2)" id="imageCount"></div>
+    </div>
+
+    <div class="nav-buttons">
+      <div></div>
+      <button class="btn btn-primary" onclick="nextStep()">🚀 开始分析</button>
+    </div>
+  </div>
+
+  <!-- ════════ Step 2: Extraction + Review ════════ -->
+  <div class="section-panel" id="step2">
+    <div class="card">
+      <h2 style="font-size:18px;margin-bottom:4px">🔍 数据提取 & 编辑</h2>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px">AI 自动识别的数据已填入下方，请逐项检查并修正</p>
+
+      <div class="completeness" id="dataCompleteness" style="display:none">
+        <span>📊</span>
+        <div class="completeness-bar"><div class="completeness-fill" style="width:0%"></div></div>
+        <span>数据完整度 0%</span>
+      </div>
+
+      <!-- Store Info -->
+      <div class="form-section">
+        <h3>📍 门店基础信息</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>门店名称</label><input id="storeName" placeholder="如：醉江湖·海鲜炒鸡"></div>
+          <div class="form-group"><label>地址</label><input id="storeAddress" placeholder="如：大连市中山区花园街28号"></div>
+          <div class="form-group"><label>坐标</label><input id="storeCoords" placeholder="如：121.63,38.92"></div>
+          <div class="form-group"><label>业态标签</label><input id="storeTags" placeholder="如：海鲜,中餐,炒菜"></div>
+          <div class="form-group"><label>评分</label><input id="storeRating" placeholder="如：4.5"></div>
+          <div class="form-group"><label>人均消费(元)</label><input id="storeAvgPrice" placeholder="如：78"></div>
+          <div class="form-group"><label>营业时间</label><input id="storeHours" placeholder="如：10:30-21:30"></div>
+          <div class="form-group"><label>分析范围</label><input id="analysisRange" placeholder="门店周边1km"></div>
+        </div>
+      </div>
+
+      <!-- POI -->
+      <div class="form-section">
+        <h3>🏪 周边POI竞争密度</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>🦐 海鲜酒楼</label><input id="poiSeafood" type="number" placeholder="数量"></div>
+          <div class="form-group"><label>🔥 烧烤店</label><input id="poiBbq" type="number" placeholder="数量"></div>
+          <div class="form-group"><label>🍳 炒菜馆</label><input id="poiStirfry" type="number" placeholder="数量"></div>
+          <div class="form-group"><label>🚌 公交站</label><input id="poiBus" type="number" placeholder="数量"></div>
+          <div class="form-group"><label>🏠 住宅小区</label><input id="poiResidential" type="number" placeholder="数量"></div>
+          <div class="form-group"><label>🏢 写字楼</label><input id="poiOffice" type="number" placeholder="数量"></div>
+          <div class="form-group"><label>🏬 商场</label><input id="poiMall" type="number" placeholder="数量"></div>
+          <div class="form-group"><label>⭐ 平均评分</label><input id="poiAvgRating" placeholder="如：4.2"></div>
+        </div>
+      </div>
+
+      <!-- Monthly Traffic -->
+      <div class="form-section">
+        <h3>📈 月度流量趋势</h3>
+        <div id="trafficList"></div>
+      </div>
+
+      <!-- Forecast -->
+      <div class="form-section">
+        <h3>🔮 景区流量预测</h3>
+        <div id="forecastList"></div>
+      </div>
+
+      <!-- Customer Profile -->
+      <div class="form-section">
+        <h3>👥 消费人群画像</h3>
+        <div class="two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div>
+            <label style="font-weight:600;font-size:14px;margin-bottom:8px;display:block">客群结构</label>
+            <div id="segmentsList"></div>
+          </div>
+          <div>
+            <label style="font-weight:600;font-size:14px;margin-bottom:8px;display:block">消费偏好</label>
+            <div id="preferencesList"></div>
+          </div>
+          <div>
+            <label style="font-weight:600;font-size:14px;margin-bottom:8px;display:block">年龄分布</label>
+            <div id="ageList"></div>
+          </div>
+          <div>
+            <label style="font-weight:600;font-size:14px;margin-bottom:8px;display:block">性别分布</label>
+            <div class="form-grid">
+              <div class="form-group"><label>男性占比 %</label><input id="genderMale" type="number" placeholder="如：58"></div>
+              <div class="form-group"><label>女性占比 %</label><input id="genderFemale" type="number" placeholder="如：42"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Heatmap -->
+      <div class="form-section">
+        <h3>🕐 时段消费热力分布</h3>
+        <div id="heatmapEditor" class="heatmap-editor"></div>
+      </div>
+
+      <!-- Insights -->
+      <div class="form-section">
+        <h3>💡 核心发现与经营建议</h3>
+        <div id="insightsList"></div>
+      </div>
+
+      <!-- Competitors -->
+      <div class="form-section">
+        <h3>⚔️ 同街道竞品对比</h3>
+        <div id="competitorsTable"></div>
+      </div>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-secondary" onclick="prevStep()">← 返回</button>
+      <button class="btn btn-primary" onclick="nextStep()">预览报告 →</button>
+    </div>
+  </div>
+
+  <!-- ════════ Step 3: Preview & Export ════════ -->
+  <div class="section-panel" id="step3">
+    <div class="card">
+      <h2 style="font-size:18px;margin-bottom:4px">📄 报告预览</h2>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px">预览确认无误后，点击"下载报告"即可获取独立 HTML 文件</p>
+      <iframe class="report-frame" id="reportPreview" sandbox="allow-scripts allow-same-origin"></iframe>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-secondary" onclick="prevStep()">← 返回编辑</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-secondary" onclick="previewInNewTab()">🔗 新窗口预览</button>
+        <button class="btn btn-success" onclick="generateAndDownload()">📥 下载报告</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div id="extractStatus" style="font-size:15px;color:var(--text)">正在分析截图...</div>
+    <div style="font-size:12px;color:var(--text2);margin-top:8px">通常需要 10-30 秒</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+<script>
+// Preview in new tab
+function previewInNewTab() {
+  collectFormData();
+  const html = generateReportHTML(state.storeData);
+  const blob = new Blob([html], { type: 'text/html' });
+  window.open(URL.createObjectURL(blob), '_blank');
+}
+</script>
+</body>
+</html>
